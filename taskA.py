@@ -75,23 +75,6 @@ def plot_timing_function():
     plt.show()
 
 
-def plot_timing_for_single_file(avg_mult_per_time_sig_per_beat, unperformed_file_path):
-    unperf_lines = open(unperformed_file_path, "r").readlines()
-    time_signature = get_time_signature(unperf_lines).strip()
-
-    multipliers = {}
-    for i in range(len(unperf_lines)):
-        multipliers[i] = avg_mult_per_time_sig_per_beat[time_signature][i]
-    plt.plot(
-        multipliers.keys(),
-        multipliers.values(),
-    )
-    plt.ylabel("multiplier")
-    plt.xlabel("beat number")
-    plt.legend(f"Humanization function for {unperformed_file_path}")
-    plt.show()
-
-
 if __name__ == "__main__":
     # use argparse and take subcorpus path as input
     parser = argparse.ArgumentParser()
@@ -108,7 +91,6 @@ if __name__ == "__main__":
             continue
 
         unperformed_file_path = os.path.join(subdir, unperformed_annotation)
-        print(unperformed_file_path)
         unperf_lines = open(unperformed_file_path, "r").readlines()
 
         annotation_files = [file for file in files if file.endswith("_annotations.txt")]
