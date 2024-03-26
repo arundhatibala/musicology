@@ -2,11 +2,6 @@ import os
 import matplotlib.pyplot as plt
 import argparse
 
-# for each time signature, for each beat, calculate the average multiplier by dividing the sum of the multipliers by the number of multipliers
-sum_mult_per_time_sig_per_beat = {}
-nr_of_mult_per_time_sig_per_beat = {}
-avg_mult_per_time_sig_per_beat = {}
-
 
 def get_time_signature(lines):
     """
@@ -55,34 +50,19 @@ def get_unperformed_to_performed_multipliers(
     return multipliers
 
 
-def plot_timing_function():
+def calculate_avg_multiplier(subcorpus_path):
     """
-    For each time signature, plot the average multipliers for each beat,
-    with the x-axis being the beat number(i.e the number of keys in the dictionary) and
-    the y-axis being the multiplier.
+    Calculate the average multiplier for each beat for each time signature.
+    Loop through all subfolders and for each subfolder, get the durations of the performed and unperformed files.
+    Calculate the multipliers for each beat by dividing the duration of the performed file by the duration of the unperformed file.
+    Update the sum and number of multipliers for each time signature and beat.
+    Return the average multiplier for each time signature and beat.
     """
-    for time_signature in avg_mult_per_time_sig_per_beat:
-        plt.plot(
-            avg_mult_per_time_sig_per_beat[time_signature].keys(),
-            avg_mult_per_time_sig_per_beat[time_signature].values(),
-            label=time_signature,
-        )
-
-    plt.ylabel("multiplier")
-    plt.xlabel("beat number")
-    # set legend text to be the time signature
-    plt.legend(title="time signature")
-    plt.show()
-
-
-if __name__ == "__main__":
-    # use argparse and take subcorpus path as input
-    parser = argparse.ArgumentParser()
-    parser.add_argument("subcorpus_path", help="path to the subcorpus")
-    args = parser.parse_args()
-
-    # get the subcorpus path folder containing the annotations of the performed and unperformed midi in each subfolder
-    subcorpus_path = args.subcorpus_path
+    # for each time signature, for each beat,
+    # calculate the average multiplier by dividing the sum of the multipliers by the number of multipliers
+    sum_mult_per_time_sig_per_beat = {}
+    nr_of_mult_per_time_sig_per_beat = {}
+    avg_mult_per_time_sig_per_beat = {}
 
     # go through all subfolders
     for subdir, dirs, files in os.walk(subcorpus_path):
@@ -139,4 +119,37 @@ if __name__ == "__main__":
                 / nr_of_mult_per_time_sig_per_beat[time_signature][beat]
             )
 
-    plot_timing_function()
+    return avg_mult_per_time_sig_per_beat
+
+
+def plot_timing_function(avg_mult_per_time_sig_per_beat):
+    """
+    For each time signature, plot the average multipliers for each beat,
+    with the x-axis being the beat number(i.e the number of keys in the dictionary) and
+    the y-axis being the multiplier.
+    """
+    for time_signature in avg_mult_per_time_sig_per_beat:
+        plt.plot(
+            avg_mult_per_time_sig_per_beat[time_signature].keys(),
+            avg_mult_per_time_sig_per_beat[time_signature].values(),
+            label=time_signature,
+        )
+
+    plt.ylabel("multiplier")
+    plt.xlabel("beat number")
+    # set legend text to be the time signature
+    plt.legend(title="time signature")
+    plt.show()
+
+
+if __name__ == "__main__":
+    # use argparse and take subcorpus path as input
+    parser = argparse.ArgumentParser()
+    parser.add_argument("subcorpus_path", help="path to the subcorpus")
+    args = parser.parse_args()
+
+    # get the subcorpus path folder containing the annotations of the performed and unperformed midi in each subfolder
+    subcorpus_path = args.subcorpus_path
+
+    avg_mult_per_time_sig_per_beat = calculate_avg_multiplier(subcorpus_path)
+    plot_timing_function(avg_mult_per_time_sig_per_beat)
