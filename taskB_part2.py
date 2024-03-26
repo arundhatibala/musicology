@@ -48,5 +48,5 @@ if __name__ == "__main__":
 
     avg_mult_per_time_sig_per_beat = calculate_avg_multiplier(subcorpus_path)
 
-    plot_expressive_timing_function(avg_mult_per_time_sig_per_beat, "4/4", 4)
-    plot_expressive_timing_function(avg_mult_per_time_sig_per_beat, "3/4", 3)
+    plot_expressive_timing_function(avg_mult_per_time_sig_per_beat, "4/4", 5)
+    plot_expressive_timing_function(avg_mult_per_time_sig_per_beat, "3/4", 4)

@@ -122,7 +122,7 @@ def calculate_avg_multiplier(subcorpus_path):
     return avg_mult_per_time_sig_per_beat
 
 
-def plot_timing_function(avg_mult_per_time_sig_per_beat):
+def plot_timing_function(avg_mult_per_time_sig_per_beat, xlabel="multiplier", ylabel="beat number"):
     """
     For each time signature, plot the average multipliers for each beat,
     with the x-axis being the beat number(i.e the number of keys in the dictionary) and
@@ -135,8 +135,8 @@ def plot_timing_function(avg_mult_per_time_sig_per_beat):
             label=time_signature,
         )
 
-    plt.ylabel("multiplier")
-    plt.xlabel("beat number")
+    plt.ylabel(xlabel)
+    plt.xlabel(ylabel)
     # set legend text to be the time signature
     plt.legend(title="time signature")
     plt.show()
