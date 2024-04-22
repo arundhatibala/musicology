@@ -240,6 +240,8 @@ def staccato_before_next_note(curr_note_idx, notes):
         notes: The list of notes.
     """
     next_notes = get_next_notes(curr_note_idx, notes)
+    if len(next_notes) == 0:
+        return False
     next_note_start = notes[next_notes[0]].start
     curr_note = notes[curr_note_idx]
     return next_note_start - curr_note.end > STACCATO_DURATION
