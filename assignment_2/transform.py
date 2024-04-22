@@ -24,6 +24,7 @@ STANDARD_DURATION = (
 )
 STACCATO_MULTIPLIER = 0.75
 SHORTENED_STACCATO_MULTIPLIER = 0.4
+STACCATO_DURATION = 0.05
 BREATH_START_MULTIPLIER = 0.2
 BREATH_VELOCITY_MULTIPLIER = 0.4
 
@@ -202,7 +203,7 @@ def is_standard_duration(note):
     """Return True if the note has a standard duration, False otherwise.
 
     Args:
-        note: The note.
+        note: The note to check.
     """
     note_duration = note.end - note.start
     threshold = 0.01
@@ -213,7 +214,7 @@ def is_extended(note):
     """Return True if the note is extended, False otherwise.
 
     Args:
-        note: The note.
+        note: The note to check.
     """
     note_duration = note.end - note.start
     threshold = 0.05
@@ -224,11 +225,24 @@ def is_shortened(note):
     """Return True if the note is shortened, False otherwise.
 
     Args:
-        note: The note.
+        note: The note to check.
     """
     note_duration = note.end - note.start
     threshold = 0.05
     return note_duration < STANDARD_DURATION - threshold
+
+
+def staccato_before_next_note(curr_note_idx, notes):
+    """Return True if there is a staccato before the next note, False otherwise.
+
+    Args:
+        curr_note_idx: The index of the current note.
+        notes: The list of notes.
+    """
+    next_notes = get_next_notes(curr_note_idx, notes)
+    next_note_start = notes[next_notes[0]].start
+    curr_note = notes[curr_note_idx]
+    return next_note_start - curr_note.end > STACCATO_DURATION
 
 
 def add_staccato_to_melody(notes):
@@ -240,6 +254,10 @@ def add_staccato_to_melody(notes):
         notes: The list of notes.
     """
     for curr_note_idx, curr_note in enumerate(notes):
+        # Apply staccato effect only if there is not already a staccato before the next note
+        if staccato_before_next_note(curr_note_idx, notes):
+            continue
+
         if is_standard_duration(curr_note):
             curr_note = apply_staccato_effect(curr_note)
             notes[curr_note_idx] = curr_note
@@ -263,7 +281,7 @@ def get_concurrent_notes(curr_note, notes):
     """Return the indexes of the notes that are played together with the current note.
 
     Args:
-        note_idx: The index of the current note.
+        curr_note: The current note.
         notes: The list of notes.
     """
     concurrent_notes = []
@@ -284,6 +302,7 @@ def apply_breath_effect(note, multiplier=BREATH_START_MULTIPLIER):
 
     Args:
         note: The note to which the breath effect is applied.
+        multiplier: The multiplier for the start delay.
     """
     start_delay = multiplier * (note.end - note.start)
     note.start += start_delay
