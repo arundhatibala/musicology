@@ -10,13 +10,16 @@
 # ok make sure to apply breath effect also to notes that are played together but not at the same time if there is at least one note that is played together at the same time
 # maybe not add small randomization on start and end of note played together in bass (add sort of flam effect)
 # check if it is possible to smooth the changings of velocity in the right hand
-# TODO problems: maybe it's ok like this: make sure right hand staccato in final part is synchronized with the left hand
+# TODO problems: maybe it's ok like this: make sure right hand staccato in final part is synchronized with the left hand - if we modify one we move the corresponding notes of the same time by the same distance
+
+
+
 import pretty_midi
 import random
 import argparse
 
 # Constants
-SILENCE_DURATION = 0.2
+SILENCE_DURATION = 0.15
 VELOCITY_VARIATION = 5
 MAX_VELOCITY = 127
 STANDARD_DURATION = (
@@ -25,7 +28,7 @@ STANDARD_DURATION = (
 STACCATO_MULTIPLIER = 0.75
 SHORTENED_STACCATO_MULTIPLIER = 0.4
 STACCATO_DURATION = 0.05
-BREATH_START_MULTIPLIER = 0.2
+BREATH_START_MULTIPLIER = 0.1
 BREATH_VELOCITY_MULTIPLIER = 0.4
 
 
