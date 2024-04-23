@@ -393,7 +393,7 @@ def adjust_notes_followed_by_silence(melody_notes, bass_notes):
                         apply_delay(note, start_delay)
                         bass_notes[note_idx] = note
 
-                apply_breath_effect(curr_note)
+                # apply_breath_effect(curr_note)
                 melody_notes[curr_note_idx] = curr_note
                 breath_effect_indexes.append(curr_note_idx)
 
