@@ -22,3 +22,8 @@ The script can be executed from the command line with the following command:
 ```bash
 python transform.py midi_score.mid output.mid
 ```
+
+The script requires the library `pretty_midi` to be installed. It can be installed with the following command:
+```bash
+pip install pretty_midi
+```
