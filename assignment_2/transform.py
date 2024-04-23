@@ -1,22 +1,7 @@
-# We assume notes are sorted by start time in the midi file
-# We could merge all the notes in the two tracks of the unperformed version into one to have a broader view of the notes, but instead we keep tracks separated in left and right hand, in order to make specific stylistic choices in our humanization process. if the midi score does not provide the two tracks, we can separate them by pitch, assuming the left hand plays the bass and the right hand plays the melody
-#
-# ok make staccato effect on repeated notes (i.e. notes with the same pitch that are played one after the other with no silence in between)->decrease the end if they are not already shortened
-# ok extend the notes that are followed by silence, if not already extended. Additionally, delay the start and decrease the velocity to add a sense of breath.
-# ok add general randomization on velocity in right hand and slightly reduce end time(ie add small staccato effect), especially in long phrases with many notes and not so much silence
-# ok normalize volume(ie velocity) of left hand to be lower than right hand
-# ok we assume the left hand plays the bass, and the right hand plays the melody
-# ok add general staccato effect to right hand (melody) notes that are of standard duration (i.e., not already shortened or extended)
-# ok make sure to apply breath effect also to notes that are played together but not at the same time if there is at least one note that is played together at the same time
-# maybe not add small randomization on start and end of note played together in bass (add sort of flam effect)
-# check if it is possible to smooth the changings of velocity in the right hand
-# TODO problems: maybe it's ok like this: make sure right hand staccato in final part is synchronized with the left hand - if we modify one we move the corresponding notes of the same time by the same distance
-
-
-
 import pretty_midi
 import random
 import argparse
+
 
 # Constants
 SILENCE_DURATION = 0.15
@@ -393,7 +378,7 @@ def adjust_notes_followed_by_silence(melody_notes, bass_notes):
                         apply_delay(note, start_delay)
                         bass_notes[note_idx] = note
 
-                # apply_breath_effect(curr_note)
+                apply_breath_effect(curr_note)
                 melody_notes[curr_note_idx] = curr_note
                 breath_effect_indexes.append(curr_note_idx)
 
