@@ -49,6 +49,7 @@ def is_extended(note):
     Args:
         note: The note to check.
     """
+
     note_duration = note.end - note.start
     threshold = 0.05
     return note_duration > STANDARD_DURATION + threshold
@@ -149,7 +150,7 @@ def split_phrases_followed_by_silence(notes):
                 [is_extended(notes[note_idx]) for note_idx in notes_currently_playing]
             )
 
-            print("NOTES CURRENTLY P;AYING")
+            print("NOTES CURRENTLY PLAYING")
             for aa in [notes[c] for c in notes_currently_playing]:
                 print(aa)
 
@@ -193,29 +194,76 @@ def is_dominant_chord(chord_obj, key):
         return True
     else:
         return False
+    
+def is_trill_duration(note):
+    """Return True if the note is shortened, False otherwise.
 
-STANDARD_DURATION = 0.05  # Example standard duration threshold
+    Args:
+        note: The note to check.
+    """
+    note_duration = note.end - note.start
+    return note_duration <= 0.05
 
 def identify_trill(notes):
+    """
+    Identify trills in the given list of notes.
+    """
+    # find trills but with a very short duration in all three notes followed by a 4th note which is extended
     trills = []
     i = 0
     while i < len(notes) - 3:
-        if (notes[i].pitch == notes[i + 1].pitch + 1 and
-            notes[i + 1].pitch == notes[i + 2].pitch - 1) or \
-           (notes[i].pitch == notes[i + 1].pitch - 1 and
-            notes[i + 1].pitch == notes[i + 2].pitch + 1):
-            if is_extended(notes[i]):
-                trills.append((notes[i], notes[i + 1], notes[i + 2]))
-                i += 3  # Skip to the next group of notes
-            elif is_extended(notes[i + 2]):
-                trills.append((notes[i], notes[i + 1], notes[i + 2]))
-                i += 3  # Skip to the next group of notes
-            else:
-                i += 1  # Move to the next note
+        if (notes[i].pitch == notes[i + 1].pitch and
+            notes[i].pitch == notes[i + 2].pitch) and \
+           is_trill_duration(notes[i]) and is_trill_duration(notes[i + 1]) and is_trill_duration(notes[i + 2]):
+            trills.append((notes[i], notes[i + 1], notes[i + 2], notes[i + 3]))
+            i += 4
         else:
-            i += 1  # Move to the next note
+            i += 1
+    print(trills)
     return trills
-    return trills
+
+    # while i < len(notes) - 3:
+    #     if (notes[i].pitch == notes[i + 1].pitch + 1 and
+    #         notes[i + 1].pitch == notes[i + 2].pitch - 1) or \
+    #        (notes[i].pitch == notes[i + 1].pitch - 1 and
+    #         notes[i + 1].pitch == notes[i + 2].pitch + 1):
+    #         if is_extended(notes[i]):
+    #             trills.append((notes[i], notes[i + 1], notes[i + 2]))
+    #             i += 3  # Skip to the next group of notes
+    #         elif is_extended(notes[i + 2]):
+    #             trills.append((notes[i], notes[i + 1], notes[i + 2]))
+    #             i += 3  # Skip to the next group of notes
+    #         else:
+    #             i += 1  # Move to the next note
+    #     else:
+    #         i += 1  # Move to the next note
+    # return trills
+
+# def find_trills(notes, threshold_duration=0.03):
+#     trills = []
+#     for i in range(len(notes) - 2):
+#         curr = notes[i]
+#         next_ = notes[i + 1]
+#         next_next = notes[i + 2]
+        
+#         # Check if the duration between three consecutive notes is within the threshold
+#         if (next_.start - curr.end) <= threshold_duration and (next_next.start - next_.end) <= threshold_duration:
+#             # Check if the pitches of the three consecutive notes form a triad
+#             if abs(curr.pitch - next_.pitch) == 1 and abs(next_.pitch - next_next.pitch) == 1:
+#                 trills.append((curr, next_, next_next))
+    
+#     return trills
+
+def find_trills(notes, max_duration=0.01):
+    short_duration_notes = []
+    for i in range(len(notes) - 1):
+        current_note = notes[i]
+        next_note = notes[i + 1]
+        duration_between_notes = next_note.start - current_note.end
+        if duration_between_notes <= max_duration:
+            short_duration_notes.append((current_note, next_note))
+    return short_duration_notes
+
 def plot_notes_velocity_by_start(notes):
     import matplotlib.pyplot as plt
 
@@ -262,26 +310,13 @@ if __name__ == "__main__":
             # Check for cadence
             # Get the note names of the notes currently playing(without the octave number)
             notes_currently_playing_pitches = [pretty_midi.note_number_to_name(note.pitch)[:-1] for note in notes_currently_playing]
-            # print(f"Notes currently playing: {notes_currently_playing_pitches}")
+            print(f"Notes currently playing: {notes_currently_playing_pitches}")
             # if set(notes_currently_playing_pitches).issubset(set(tonic_chord_pitches)):
             #     print("TONIC CHORD")
             # elif set(notes_currently_playing_pitches).issubset(set(dominant_chord_pitches)):
             #     print("DOMINANT CHORD")
 
-            
-            
-
-            # print(f"Concurrent notes: ")
-            # for c in concurrent_notes:
-            #     print(piano_instrument.notes[c])
-            
-            # if concurrent notes belong to array
-            
-
-            # possible_chord_pitches.sort()
-
-            # chord_obj = music21.chord.Chord(possible_chord_pitches)
-            # get the note name from a pitch and check if all the currently playing notes belong to a dominant fifth or tonic chord
+    print("TRILLS", find_trills(subset))
             
     # save the notes in a file
     phrase_midi = pretty_midi.PrettyMIDI()
@@ -290,8 +325,13 @@ if __name__ == "__main__":
     phrase_midi.instruments.append(phrase_instrument)
     phrase_midi.write(f"trymio.mid")
     
-    
-    
+    trills = find_trills(subset)
+    trill_midi = pretty_midi.PrettyMIDI()
+    trill_instrument = pretty_midi.Instrument(program=0)
+    trill_instrument.notes = trills
+    trill_midi.instruments.append(trill_instrument)
+    trill_midi.write(f"trills_extracted.mid")
+
     # # plot_notes_velocity_by_start(piano_instrument.notes)
 
 
