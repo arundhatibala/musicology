@@ -219,6 +219,12 @@ def split_phrases_followed_by_silence(notes):
     phrase = notes[phrase_start:]
     phrases.append(phrase)
 
+def identify_trill(notes):
+    trills = []
+    for i in range(len(notes) - 1):
+        if abs(notes[i].pitch - notes[i + 1].pitch) == 1:
+            trills.append((notes[i], notes[i + 1]))
+    return trills
 
 def plot_notes_velocity_by_start(notes):
     import matplotlib.pyplot as plt
@@ -244,10 +250,11 @@ if __name__ == "__main__":
 
     piano_instrument = list(piano.instruments)[0]
 
-
-
     startsub = 0
     subset = piano_instrument.notes[startsub:startsub+50]
+
+    print(f"Trills identified: {identify_trill(subset)}")
+
     for i, note in enumerate(subset):
         print(f"Note {i+startsub}: {note}")
         concurrent_notes = get_concurrent_notes_idx(note, piano_instrument.notes)
