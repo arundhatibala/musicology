@@ -148,18 +148,35 @@ def get_notes_currently_playing(curr_note_idx, notes):
 
 
 def is_tonic_chord(note_pitches):
+    """Return True if the note pitches are a tonic chord, False otherwise.
+
+    Args:
+        note_pitches: The pitches of the notes.
+    """
     global tonic_chord_pitches
+
     return set(note_pitches).issubset(set(tonic_chord_pitches))
 
 
 def is_dominant_chord(note_pitches):
+    """Return True if the note pitches are a dominant chord, False otherwise.
+
+    Args:
+        note_pitches: The pitches of the notes.
+    """
     global dominant_chord_pitches
+
     return set(note_pitches).issubset(set(dominant_chord_pitches))
 
 
 def is_octave(note_pitches):
+    """Return True if at least two notes with same pitch are the tonic, False otherwise.
+
+    Args:
+        note_pitches: The pitches of the notes.
+    """
     global key
-    # if at least there are two notes with same pitch that are tonic
+
     tonic_cnt = 0
     if len(note_pitches) >= 2:
         for pitch in note_pitches:
@@ -171,13 +188,14 @@ def is_octave(note_pitches):
 
 
 def is_cadence(notes_currently_playing_idx, notes):
-    global tonic_chord_pitches, dominant_chord_pitches
     """Return True if the notes currently playing are a cadence, False otherwise.
 
     Args:
         notes_currently_playing_idx: The indexes of the notes currently playing.
         notes: The list of notes.
     """
+    global tonic_chord_pitches, dominant_chord_pitches
+
     notes_currently_playing = [
         notes[note_idx] for note_idx in notes_currently_playing_idx
     ]
@@ -213,6 +231,11 @@ def is_cadence(notes_currently_playing_idx, notes):
 
 
 def split_phrases(notes):
+    """Split the notes into phrases. A phrase is a sequence of notes that ends with a silence, a sudden velocity change, a cadence, or a trill.
+
+    Args:
+        notes: The list of notes.
+    """
     phrase_start = 0
     already_processed = []
     for curr_note_idx, curr_note in enumerate(notes):
@@ -269,9 +292,11 @@ def is_trill_duration(note):
 
 def identify_trill(notes):
     """
-    Identify trills in the given list of notes.
+    Identify trills in the given list of notes. Trills are composed of three notes of short duration, followed by a 4th note which is extended.
+
+    Args:
+        notes: The list of notes.
     """
-    # find trills but with a very short duration in all three notes followed by a 4th note which is extended
     trills = []
     i = 0
     while i < len(notes) - 3:
@@ -291,9 +316,13 @@ def identify_trill(notes):
 
     return trills
 
+
 def is_trill(note):
     """
     Return True if the note is the last note of a trill, False otherwise.
+
+    Args:
+        note: The note to check.
     """
     for trill in trills:
         if note == trill[-1]:
@@ -309,9 +338,9 @@ if __name__ == "__main__":
 
     input_midi_file = args.input_midi_file
     output_folder = args.output_folder
+    filename = input_midi_file.split("/")[-1].split(".")[0]
 
     # create the output folder if it does not exist
-
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
@@ -320,6 +349,7 @@ if __name__ == "__main__":
 
     piano_instrument = list(piano.instruments)[0]
 
+    # Identify the key of the piece and the tonic and dominant chords
     score = music21.converter.parse(input_midi_file)
     key = score.analyze("key")
 
@@ -335,23 +365,24 @@ if __name__ == "__main__":
     dominant_chord_pitches = [p.name for p in dominant_chord_pitches]
 
     trills = identify_trill(piano_instrument.notes)
-    avg_beat_length = 0
-    # create a midi file for each phrase
-    split_phrases(piano_instrument.notes)
-    for i, phrase in enumerate(phrases):
 
+    split_phrases(piano_instrument.notes)
+
+    avg_beat_length = 0
+
+    # Create a midi file for each phrase
+    for i, phrase in enumerate(phrases):
         phrase_midi = pretty_midi.PrettyMIDI()
         phrase_instrument = pretty_midi.Instrument(program=0)
         phrase_instrument.notes = phrase
         phrase_midi.instruments.append(phrase_instrument)
-        filename = input_midi_file.split("/")[-1].split(".")[0]
         beat_start = int(phrase[0].start)
         beat_end = int(phrase[-1].end)
         avg_beat_length += beat_end - beat_start
-        phrase_midi.write(f"{output_folder}/{filename}_phrase_{i}_start_{beat_start}_end_{beat_end}.mid")
-        print(
-            f"Phrase {i} saved, beat start: {beat_start}, beat end: {beat_end}"
+        phrase_midi.write(
+            f"{output_folder}/{filename}_phrase_{i}_start_{beat_start}_end_{beat_end}.mid"
         )
+        print(f"Phrase {i} saved, beat start: {beat_start}, beat end: {beat_end}")
 
     avg_beat_length = avg_beat_length / len(phrases)
     print(f"Average beat length: {avg_beat_length}")
