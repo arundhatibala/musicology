@@ -36,7 +36,7 @@ The notebook `model_p_score.ipynb` segments the unperformed `xml` score into phr
 
 The detected and segmented phrases will then be returned as tuples, composed by the starting and the ending beat of the phrase. Additional analyses are also included in the notebook, such as variants on the SSM (computed on different units or the spectrograms of the MIDI files). 
 
-To run the notebook model_p_score.ipynb, you need to install the following additional libraries:
+To run only the notebook model_p_score.ipynb, the following libraries are required:
 ```bash
 pip install pretty_midi
 pip install music21
