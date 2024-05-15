@@ -28,5 +28,11 @@ pip install music21
 ```
 
 
-The notebook `model_p_score.ipynb` segments the performed MIDI file into phrases based on the score by using self-similarity matrices.
-TODO
+The notebook `model_p_score.ipynb` segments the unperformed `xml` score into phrases, implementing a method that combines information from the self-similarity matrix (SSM) and musical notation. This method uses the following approach:
+
+- Self-Similarity Matrix (SSM): Constructs an SSM where each entry (i, j) represents the similarity between beats i and j. Similarity values are computed based on pitch patterns, considering transpositions.
+- Phrase Detection: Uses the SSM to detect phrases by identifying changes in similarity patterns. Phrases are initially segmented when the similarity falls below a threshold.
+- Musical Notation: Refines the phrase boundaries using musical notation, checking for final bars or repetitions and merging short phrases with adjacent ones.
+- Visualization: Plots the SSM and highlights detected phrases.
+
+The detected and segmented phrases will then be returned as tuples, composed by the starting and the ending beat of the phrase. Additional analyses are also included in the notebook, such as variants on the SSM (computed on different units or the spectrograms of the MIDI files). 
