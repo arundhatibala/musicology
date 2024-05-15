@@ -1,5 +1,8 @@
+import music21
 import pretty_midi
 import argparse
+import os
+
 
 # Constants
 SILENCE_DURATION = 0.3
@@ -10,6 +13,10 @@ VELOCITY_THRESHOLD = 0.5
 NR_NOTES_FOR_VELOCITY_CHECK = 5
 
 phrases = []  # list of list of notes composing each phrase
+key = None
+tonic_chord_pitches = []
+dominant_chord_pitches = []
+trills = []
 
 
 def get_next_notes(note_idx, notes):
@@ -33,12 +40,12 @@ def get_next_notes(note_idx, notes):
             continue
         next_note_start = notes[next_node_idx].start
         if next_note_start > curr_note.end:
-            next_note_found = True            
+            next_note_found = True
             next_notes.append(next_node_idx)
     if len(next_notes) > 0:
         next_concurrent_notes = get_concurrent_notes_idx(notes[next_notes[0]], notes)
         next_notes.extend(next_concurrent_notes)
-        next_notes = list(set(next_notes)) # remove duplicates
+        next_notes = list(set(next_notes))  # remove duplicates
     return next_notes
 
 
@@ -76,7 +83,7 @@ def sudden_velocity_change(curr_note_idx, next_notes_idx, notes):
         if any([note in notes_currently_playing for note in prev_notes]):
             i += 1
             continue
-         
+
         curr_velocities.append([note.velocity for note in prev_notes])
         i += 1
         velocity_check_cnt += 1
@@ -90,29 +97,21 @@ def sudden_velocity_change(curr_note_idx, next_notes_idx, notes):
         next_next_notes = get_notes_currently_playing(next_notes_last_idx + i, notes)
 
         # if any of the next next notes is in the next notes, continue
-        if any([note in next_notes for note in next_next_notes]): 
+        if any([note in next_notes for note in next_next_notes]):
             i += 1
             continue
 
         next_velocities.append([note.velocity for note in next_next_notes])
         i += 1
         velocity_check_cnt += 1
-        
+
     # Get the avg velocity of the current and next notes of the subarrays and then the array
     curr_velocities = [sum(subarray) / len(subarray) for subarray in curr_velocities]
     next_velocities = [sum(subarray) / len(subarray) for subarray in next_velocities]
     curr_velocity = sum(curr_velocities) // len(curr_velocities)
     next_velocity = sum(next_velocities) // len(next_velocities)
 
-    print(f"abs(curr_velocity - next_velocity) >= VELOCITY_THRESHOLD*(curr_velocity) : {abs(curr_velocity - next_velocity) >= VELOCITY_THRESHOLD*(curr_velocity)}")
-    if abs(curr_velocity - next_velocity) >= VELOCITY_THRESHOLD*(curr_velocity):
-        print(f"notes currently playing:")
-        for n in notes_currently_playing:
-            print(n)
-        print(f"next notes:")
-        for n in next_notes:
-            print(n)
-    return abs(curr_velocity - next_velocity) >= VELOCITY_THRESHOLD*(curr_velocity)
+    return abs(curr_velocity - next_velocity) >= VELOCITY_THRESHOLD * (curr_velocity)
 
 
 def get_concurrent_notes_idx(curr_note, notes):
@@ -133,19 +132,6 @@ def get_concurrent_notes_idx(curr_note, notes):
             break
     return concurrent_notes
 
-def is_trill_and_then_extended(curr_note, notes):
-    """Return True if the current note is a trill and extended, False otherwise.
-
-    Args:
-        curr_note: The current note.
-        notes: The list of notes.
-    """
-    if curr_note.pitch == 67:
-        next_notes = get_next_notes(curr_note, notes)
-        if len(next_notes) > 0:
-            next_note = notes[next_notes[0]]
-            return is_extended(curr_note) and is_extended(next_note)
-    return False
 
 def get_notes_currently_playing(curr_note_idx, notes):
     """Return the indexes of the notes that are currently playing with the current note.
@@ -161,7 +147,72 @@ def get_notes_currently_playing(curr_note_idx, notes):
     return [notes[note_idx] for note_idx in notes_currently_playing]
 
 
-def split_phrases_followed_by_silence(notes):
+def is_tonic_chord(note_pitches):
+    global tonic_chord_pitches
+    return set(note_pitches).issubset(set(tonic_chord_pitches))
+
+
+def is_dominant_chord(note_pitches):
+    global dominant_chord_pitches
+    return set(note_pitches).issubset(set(dominant_chord_pitches))
+
+
+def is_octave(note_pitches):
+    global key
+    # if at least there are two notes with same pitch that are tonic
+    tonic_cnt = 0
+    if len(note_pitches) >= 2:
+        for pitch in note_pitches:
+            if str(pitch) == str(key.tonic):
+                tonic_cnt += 1
+    if tonic_cnt >= 2:
+        return True
+    return False
+
+
+def is_cadence(notes_currently_playing_idx, notes):
+    global tonic_chord_pitches, dominant_chord_pitches
+    """Return True if the notes currently playing are a cadence, False otherwise.
+
+    Args:
+        notes_currently_playing_idx: The indexes of the notes currently playing.
+        notes: The list of notes.
+    """
+    notes_currently_playing = [
+        notes[note_idx] for note_idx in notes_currently_playing_idx
+    ]
+    if len(notes_currently_playing) >= 3:
+        notes_currently_playing_pitches = [
+            pretty_midi.note_number_to_name(note.pitch)[:-1]
+            for note in notes_currently_playing
+        ]
+
+        if is_tonic_chord(notes_currently_playing_pitches) or is_octave(
+            notes_currently_playing_pitches
+        ):
+            if any([is_extended(n) for n in notes_currently_playing]):
+                first_note_idx = min(notes_currently_playing_idx)
+                # check if any previous chord is a dominant chord
+                for i in range(first_note_idx - 1, -1, -1):
+                    previous_notes = get_notes_currently_playing(i, notes)
+                    if len(previous_notes) < 3:
+                        continue
+                    previous_notes_pitches = [
+                        pretty_midi.note_number_to_name(n.pitch)[:-1]
+                        for n in previous_notes
+                    ]
+                    if is_dominant_chord(previous_notes_pitches):
+                        return True
+                    else:
+                        break
+
+        # elif is_dominant_chord(notes_currently_playing_pitches):
+        #     if any([is_extended(n) for n in notes_currently_playing]):
+        #         return True
+    return False
+
+
+def split_phrases(notes):
     phrase_start = 0
     already_processed = []
     for curr_note_idx, curr_note in enumerate(notes):
@@ -182,36 +233,22 @@ def split_phrases_followed_by_silence(notes):
 
         if len(next_notes) > 0:
             next_note = notes[next_notes[0]]
-            notes_currently_playing = concurrent_notes.copy()
-            notes_currently_playing.append(curr_note_idx)
-            is_there_a_extended_note = any(
-                [is_extended(notes[note_idx]) for note_idx in notes_currently_playing]
+            notes_currently_playing_idx = concurrent_notes.copy()
+            notes_currently_playing_idx.append(curr_note_idx)
+
+            is_there_sudden_velocity_change = sudden_velocity_change(
+                curr_note_idx, next_notes, notes
             )
 
-            print("NOTES CURRENTLY P;AYING")
-            for aa in [notes[c] for c in notes_currently_playing]:
-                print(aa)
-
-            print("NEXT NOTES")
-            for aa in [notes[n] for n in next_notes]:
-                print(aa)
-
-            is_there_sudden_velocity_change = sudden_velocity_change(curr_note_idx, next_notes, notes)
-    
-            if next_note.start - last_concurrent_note.end >= SILENCE_DURATION or is_there_sudden_velocity_change:
+            if (
+                next_note.start - last_concurrent_note.end >= SILENCE_DURATION
+                or is_there_sudden_velocity_change
+                or is_cadence(notes_currently_playing_idx, notes)
+                or is_trill(last_concurrent_note)
+            ):
                 already_processed.extend(concurrent_notes)
                 already_processed.append(curr_note_idx)
-                print(len(phrases))
-                for c in concurrent_notes:
-                    print(notes[c])
-                print(f"curr_note_idx: {curr_note}")
-                print(f"concurrent_notes: {concurrent_notes}")
-                print(f"next_note: {next_note}")
-                print(f"last_concurrent_note: {last_concurrent_note}")
-                print(
-                    f"next_note.start - last_concurrent_note.end >= SILENCE_DURATION: {next_note.start - last_concurrent_note.end >= SILENCE_DURATION}"
-                )
-                
+
                 phrase = notes[phrase_start : last_concurrent_note_idx + 1]
                 phrases.append(phrase)
                 phrase_start = last_concurrent_note_idx + 1
@@ -219,72 +256,102 @@ def split_phrases_followed_by_silence(notes):
     phrase = notes[phrase_start:]
     phrases.append(phrase)
 
+
+def is_trill_duration(note):
+    """Return True if the note is shortened, False otherwise.
+
+    Args:
+        note: The note to check.
+    """
+    note_duration = note.end - note.start
+    return note_duration <= 0.05
+
+
 def identify_trill(notes):
+    """
+    Identify trills in the given list of notes.
+    """
+    # find trills but with a very short duration in all three notes followed by a 4th note which is extended
     trills = []
-    for i in range(len(notes) - 1):
-        if abs(notes[i].pitch - notes[i + 1].pitch) == 1:
-            trills.append((notes[i], notes[i + 1]))
+    i = 0
+    while i < len(notes) - 3:
+        if (
+            (
+                notes[i].pitch == notes[i + 1].pitch
+                and notes[i].pitch == notes[i + 2].pitch
+            )
+            and is_trill_duration(notes[i])
+            and is_trill_duration(notes[i + 1])
+            and is_trill_duration(notes[i + 2])
+        ):
+            trills.append((notes[i], notes[i + 1], notes[i + 2], notes[i + 3]))
+            i += 4
+        else:
+            i += 1
+
     return trills
 
-def plot_notes_velocity_by_start(notes):
-    import matplotlib.pyplot as plt
+def is_trill(note):
+    """
+    Return True if the note is the last note of a trill, False otherwise.
+    """
+    for trill in trills:
+        if note == trill[-1]:
+            return True
+    return False
 
-    x = [note.start for note in notes]
-    y = [note.velocity for note in notes]
-    plt.scatter(x, y)
-    plt.xlabel("Start time")
-    plt.ylabel("Velocity")
-    plt.title("Velocity of notes by start time")
-    plt.show()    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("input_midi_file", help="The input MIDI file")
-    # parser.add_argument("output_midi_file", help="The output MIDI file")
+    parser.add_argument("output_folder", help="The output phrases folder")
     args = parser.parse_args()
 
     input_midi_file = args.input_midi_file
+    output_folder = args.output_folder
+
+    # create the output folder if it does not exist
+
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
 
     # Load the input MIDI file representing the unperformed version
     piano = pretty_midi.PrettyMIDI(input_midi_file)
 
     piano_instrument = list(piano.instruments)[0]
 
-    startsub = 0
-    subset = piano_instrument.notes[startsub:startsub+50]
+    score = music21.converter.parse(input_midi_file)
+    key = score.analyze("key")
 
-    print(f"Trills identified: {identify_trill(subset)}")
+    tonic_chord_pitches = [key.tonic, key.pitchFromDegree(3), key.pitchFromDegree(5)]
+    tonic_chord_pitches = [p.name for p in tonic_chord_pitches]
 
-    for i, note in enumerate(subset):
-        print(f"Note {i+startsub}: {note}")
-        concurrent_notes = get_concurrent_notes_idx(note, piano_instrument.notes)
-        print(f"Concurrent notes: ")
-        for c in concurrent_notes:
-            print(piano_instrument.notes[c])
-        next_notes = get_next_notes(i+startsub, piano_instrument.notes)
-        print(f"Next notes: ")
-        for n in next_notes:
-            print(piano_instrument.notes[n])
-        print("----------------")
-    # save the notes in a file
-    phrase_midi = pretty_midi.PrettyMIDI()
-    phrase_instrument = pretty_midi.Instrument(program=0)
-    phrase_instrument.notes = subset
-    phrase_midi.instruments.append(phrase_instrument)
-    phrase_midi.write(f"trymio.mid")
-    
-    
-    
-    # plot_notes_velocity_by_start(piano_instrument.notes)
+    dominant_chord_pitches = [
+        key.pitchFromDegree(5),
+        key.pitchFromDegree(7),
+        key.pitchFromDegree(2),
+        key.pitchFromDegree(4),
+    ]
+    dominant_chord_pitches = [p.name for p in dominant_chord_pitches]
 
-
-
+    trills = identify_trill(piano_instrument.notes)
+    avg_beat_length = 0
     # create a midi file for each phrase
-    split_phrases_followed_by_silence(piano_instrument.notes)
+    split_phrases(piano_instrument.notes)
     for i, phrase in enumerate(phrases):
+
         phrase_midi = pretty_midi.PrettyMIDI()
         phrase_instrument = pretty_midi.Instrument(program=0)
         phrase_instrument.notes = phrase
         phrase_midi.instruments.append(phrase_instrument)
-        phrase_midi.write(f"tryphrase_{i}.mid")
-        print(f"Phrase {i} saved")
+        filename = input_midi_file.split("/")[-1].split(".")[0]
+        beat_start = int(phrase[0].start)
+        beat_end = int(phrase[-1].end)
+        avg_beat_length += beat_end - beat_start
+        phrase_midi.write(f"{output_folder}/{filename}_phrase_{i}_start_{beat_start}_end_{beat_end}.mid")
+        print(
+            f"Phrase {i} saved, beat start: {beat_start}, beat end: {beat_end}"
+        )
+
+    avg_beat_length = avg_beat_length / len(phrases)
+    print(f"Average beat length: {avg_beat_length}")
