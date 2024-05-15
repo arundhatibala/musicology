@@ -8,7 +8,6 @@ The repository is structured as follows:
 - `larger_corpus_phrases`: it is the folder where we store the phrases segmented based on the performance for the larger corpus.
 - `phrase_segmentation.py`: it is the Python script that we developed to segment the performed MIDI file into phrases based on the performance.
 - `model_p_score.ipynb`: it is the Jupyter notebook that we developed to segment the performed MIDI file into phrases based on the score.
-- `ssm_turkish_march.ipynb`: TODO
 
 The script `phrase_segmentation.py` segments the performed MIDI file into phrases based on these performance attributes:
 - Silence
@@ -36,3 +35,13 @@ The notebook `model_p_score.ipynb` segments the unperformed `xml` score into phr
 - Visualization: Plots the SSM and highlights detected phrases.
 
 The detected and segmented phrases will then be returned as tuples, composed by the starting and the ending beat of the phrase. Additional analyses are also included in the notebook, such as variants on the SSM (computed on different units or the spectrograms of the MIDI files). 
+
+To run the notebook model_p_score.ipynb, you need to install the following additional libraries:
+```bash
+pip install pretty_midi
+pip install music21
+pip install numpy
+pip install matplotlib
+pip install librosa
+pip install pandas
+```
